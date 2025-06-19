@@ -1,0 +1,27 @@
+#Entrar a ubicacion local
+$ cd "C:/Users/Support/Real Estate Ai Portfolio"
+#nicializar git
+$ git init
+#anadir repo
+$ git remote add origin https://github.com/punkymx/real-estate-ai-portfolio.git
+#anadir todo
+$ git add .
+#listar archivos
+$ ls
+## sincronizar on repo
+$ git pull origin main
+
+
+## otra opcion 
+cd ..
+rm -r "Real Estate Ai Portfolio"  # (o bórrala manualmente si estás en Windows)
+git clone https://github.com/punkymx/real-estate-ai-portfolio.git
+cd real-estate-ai-portfolio
+
+▶️ Paso final: Ejecutar el servidor de desarrollo
+Asegúrate de estar dentro de la carpeta raíz de tu proyecto (por ejemplo: real-estate-ai-portfolio), y luego ejecuta:
+
+bash
+Copiar
+Editar
+npm run dev
