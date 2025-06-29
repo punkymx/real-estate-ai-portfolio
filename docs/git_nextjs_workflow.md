@@ -58,6 +58,23 @@ git config --global user.email "coqm86@gmail.com"
 git remote add origin https://github.com/punkymx/real-estate-ai-portfolio.git
 ```
 
+###  Sugested Branch Strategy for Organized Development
+```bash
+Main Branch:
+main: Stable branch for production-ready code
+
+Suggested Feature Branches:
+git checkout -b feature/property-catalog       # Property catalog layout and logic
+git checkout -b feature/filters-ui             # UI filters for property search
+git checkout -b feature/ai-description-agent   # AI-generated property descriptions
+git checkout -b feature/contact-form           # Contact form and integration
+Example Fix Branch:
+git checkout -b fix/card-image-ratio           # Fix image proportions in property cards
+Optional Release Branch:
+git checkout -b release/v1.0.0                 # Prepare first stable release for portfolio
+See branch_workflow.md for more details....
+
+```
 ### 3. Push Initial Code to GitHub
 
 ```bash
