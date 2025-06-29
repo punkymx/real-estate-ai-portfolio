@@ -3,6 +3,9 @@
 
 This document summarizes the configuration choices made when initializing the Next.js project using `create-next-app`.
 
+
+ # Launches the interactive setup assistant for a new Next.js project 
+ npx create-next-app@latest
 ---
 
 ## ✅ Configuration Choices
