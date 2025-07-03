@@ -178,3 +178,133 @@ URL: http://localhost:3000/api/properties
 Body: None.
 
 Expected Result: 200 OK status code, with an array of property objects (including nested images) in the response body.
+
+____________________________________________________________________________________________
+
+API Testing Documentation: PUT and DELETE Operations (Postman)
+These instructions detail how to test the property update and deletion endpoints using Postman, assuming your Next.js server is running (npm run dev).
+
+1. Testing the DELETE Operation (Delete a Property)
+This operation removes a specific property from the database, identified by its unique ID.
+
+HTTP Method: DELETE
+
+Endpoint URL: http://localhost:3000/api/properties/[PROPERTY_ID]
+
+Important: You must replace [PROPERTY_ID] with the actual ID of an existing property in your database. You can obtain this ID by making a GET request to http://localhost:3000/api/properties and copying the id from one of the properties in the response.
+
+Example URL: http://localhost:3000/api/properties/957163bc-d10d-422c-aea3-37780694f0ad
+
+Request Body:
+
+No request body is required. Ensure the "Body" option in Postman is set to "none" or empty.
+
+Headers:
+
+No special headers are required beyond those Postman adds by default.
+
+Steps in Postman:
+
+Open Postman.
+
+Create a new request.
+
+Select the DELETE method.
+
+Paste the endpoint URL, replacing [PROPERTY_ID] with a valid ID.
+
+Ensure the "Body" tab is configured as "none".
+
+Click "Send".
+
+Expected Result:
+
+Status Code: 204 No Content.
+
+Response Body: Empty.
+
+Additional Verification:
+
+After performing the DELETE, make a GET request to http://localhost:3000/api/properties. The property you just deleted should no longer appear in the list.
+
+2. Testing the PUT Operation (Update a Property)
+This operation updates the data of an existing property in the database, identified by its unique ID. You can update one or more fields, including the gallery images.
+
+HTTP Method: PUT
+
+Endpoint URL: http://localhost:3000/api/properties/[PROPERTY_ID]
+
+Important: You must replace [PROPERTY_ID] with the actual ID of the property you wish to update. Obtain this ID from a previous GET request.
+
+Example URL: http://localhost:3000/api/properties/957163bc-d10d-422c-aea3-37780694f0ad
+
+Request Body:
+
+Select the raw option and JSON type.
+
+Send a JSON object containing only the property fields you wish to update.
+
+For gallery images (images):
+
+If you do not include the images field in the PUT request body, the property's existing images will not be modified.
+
+If you include images: [] (an empty array), all associated images for that property will be deleted, and no new ones will be created.
+
+If you include images with an array of { "url": "your_new_url" } objects, the backend will delete all existing images and create the new ones you provided in the array.
+
+Example JSON Body for PUT (Update Title, Price, and ALL Images):
+
+JSON
+
+{
+  "title": "UPDATED Colonial Residence on Paseo Montejo",
+  "price": 550000,
+  "location": "Paseo Montejo, Mérida",
+  "description": "An architectural gem with history and all modern amenities on Mérida's most emblematic avenue. Now with new photos!",
+  "furnished": true,
+  "images": [
+    { "url": "https://res.cloudinary.com/your-cloud-name/image/upload/v1/image1.jpg" },
+    { "url": "https://res.cloudinary.com/your-cloud-name/image/upload/v1/image2.jpg" },
+    { "url": "https://res.cloudinary.com/your-cloud-name/image/upload/v1/image3.jpg" }
+  ]
+}
+Example JSON Body for PUT (Only Update Title and Price, without touching Images):
+
+JSON
+
+{
+  "title": "Colonial Residence - Price Adjusted",
+  "price": 525000
+}
+Steps in Postman:
+
+Open Postman.
+
+Create a new request.
+
+Select the PUT method.
+
+Paste the endpoint URL, replacing [PROPERTY_ID] with a valid ID.
+
+Go to the "Body" tab, select raw and choose JSON from the dropdown.
+
+Paste the JSON body with the fields you want to update.
+
+Click "Send".
+
+Expected Result:
+
+Status Code: 200 OK.
+
+Response Body: A JSON object representing the updated property, including images if you modified them.
+
+Additional Verification:
+
+After performing the PUT, make a GET request to http://localhost:3000/api/properties to confirm that the changes are reflected in the list of properties.
+
+If you updated the images, verify that the new URLs appear in the GET response.
+
+How to Update Your Image URLs to Cloudinary:
+Upload your images to Cloudinary: If you haven't already, upload your property images to your Cloudinary account. Cloudinary will provide you with a public URL for each image (e.g., https://res.cloudinary.com/your-cloud-name/image/upload/v12345/your-image-id.jpg).
+
+Use these URLs in your POST and PUT requests: When creating a new property or updating an existing one, use the Cloudinary URLs in the main image field and in the images array for the gallery in your Postman JSON.

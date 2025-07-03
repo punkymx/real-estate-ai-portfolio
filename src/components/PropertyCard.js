@@ -1,27 +1,46 @@
-// src/components/PropertyCard.jsx
+// src/components/PropertyCard.js
+import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link'; // Import the Link component
 
-export default function PropertyCard({ title, price, location, image, type, bedrooms, bathrooms }) { // Add new props
+export default function PropertyCard({
+  id, // Ensure 'id' is passed as a prop
+  title,
+  price,
+  location,
+  image,
+  type,
+  bedrooms,
+  bathrooms,
+}) {
   return (
-    <div className="border rounded shadow-sm bg-white overflow-hidden">
-      <img src={image} alt={title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-1">{title}</h2> {/* Added mb-1 */}
-        <p className="text-gray-600 text-sm mb-2">{location}</p> {/* Adjusted text size and added mb-2 */}
-
-        {/* NEW: Add type, bedrooms, bathrooms */}
-        <div className="flex items-center text-gray-700 text-sm mb-2">
-          {/* You might want icons here, e.g., from Heroicons or Font Awesome */}
-          <span className="mr-2 capitalize">{type}</span> {/* Capitalize first letter */}
-          {bedrooms > 0 && ( // Only show if bedrooms > 0
-            <span className="mr-2">| {bedrooms} Bd</span>
-          )}
-          {bathrooms > 0 && ( // Only show if bathrooms > 0
-            <span>| {bathrooms} Ba</span>
-          )}
+    // Wrap the entire card with Next.js Link component
+    // passHref is important when the Link's child is a custom component or a styled component
+    <Link href={`/properties/${id}`} passHref>
+      <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden cursor-pointer">
+        {/* Image Container */}
+        <div className="relative w-full h-48">
+          <Image
+            src={image || '/images/default-property.jpg'} // Fallback image if 'image' is null/undefined
+            alt={title}
+            layout="fill"
+            objectFit="cover"
+            className="rounded-t-lg"
+          />
         </div>
 
-        <p className="text-green-600 font-bold mt-2 text-lg">${price.toLocaleString()}</p> {/* Increased font size slightly */}
+        {/* Property Details */}
+        <div className="p-4">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>
+          <p className="text-gray-700 text-lg font-semibold mb-1">${price?.toLocaleString()}</p>
+          <p className="text-gray-600 text-sm mb-2">{location}</p>
+          <div className="flex items-center text-gray-500 text-sm">
+            <span className="mr-3">{type}</span>
+            <span className="mr-3">{bedrooms} bed</span>
+            <span>{bathrooms} bath</span>
+          </div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

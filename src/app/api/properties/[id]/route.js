@@ -5,14 +5,14 @@ import { NextResponse } from 'next/server';
 const prisma = new PrismaClient();
 
 // Handler for GET requests to /api/properties/[id]
-// (Aunque no lo pediste explícitamente para el frontend aún, es buena práctica tenerlo)
 export async function GET(request, { params }) {
-  const { id } = params; // Obtiene el ID de la URL dinámica
+  // FIX: Await params before destructuring its properties
+  const { id } = await params;
   try {
     const property = await prisma.property.findUnique({
       where: { id: id },
       include: {
-        images: true, // Incluye las imágenes relacionadas
+        images: true, // Include related images
       },
     });
 
@@ -29,47 +29,37 @@ export async function GET(request, { params }) {
 
 // Handler for PUT requests to /api/properties/[id] (Update Property)
 export async function PUT(request, { params }) {
-  const { id } = params; // Obtiene el ID de la URL dinámica
-  const body = await request.json(); // Obtiene el cuerpo de la solicitud JSON
-  const { images, ...propertyData } = body; // Separa las imágenes del resto de los datos de la propiedad
+  // FIX: Await params before destructuring its properties
+  const { id } = await params;
+  const body = await request.json();
+  const { images, ...propertyData } = body;
 
   try {
-    // Si hay datos de imágenes en el body, manejamos la actualización o creación de imágenes.
-    // Esto es más complejo que solo actualizar campos de Property.
-    // Para simplificar, vamos a eliminar todas las imágenes existentes y crear las nuevas.
-    // Un enfoque más robusto implicaría comparar y actualizar/eliminar/crear solo las necesarias.
-
-    // 1. Opcional: Eliminar imágenes existentes asociadas a la propiedad
-    if (images !== undefined) { // Solo si 'images' se envió en el body
+    if (images !== undefined) {
       await prisma.propertyImage.deleteMany({
         where: { propertyId: id },
       });
     }
 
-    // 2. Actualizar la propiedad principal
     const updatedProperty = await prisma.property.update({
       where: { id: id },
       data: {
-        ...propertyData, // Los datos principales de la propiedad
-        ...(images !== undefined && images.length > 0 && { // Solo añade 'images' si se proveyó y no está vacío
+        ...propertyData,
+        ...(images !== undefined && images.length > 0 && {
           images: {
-            create: images, // Crea las nuevas imágenes (ya tienen el formato correcto { url: "..." })
+            create: images,
           },
         }),
-        // Si no se proporcionan 'images' en el body, este campo no se modifica.
-        // Si se proporciona un array vacío, se borrarán las existentes (por el deleteMany previo)
-        // y no se creará ninguna nueva.
       },
       include: {
-        images: true, // Incluye las imágenes actualizadas en la respuesta
+        images: true,
       },
     });
 
     return NextResponse.json(updatedProperty, { status: 200 });
   } catch (error) {
     console.error(`Error updating property with ID ${id}:`, error);
-    // Errores de validación de Prisma suelen tener 'code'
-    if (error.code === 'P2025') { // P2025: An operation failed because it depends on one or more records that were required but not found.
+    if (error.code === 'P2025') {
       return NextResponse.json({ message: 'Property not found for update' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Error updating property', error: error.message }, { status: 500 });
@@ -78,19 +68,14 @@ export async function PUT(request, { params }) {
 
 // Handler for DELETE requests to /api/properties/[id] (Delete Property)
 export async function DELETE(request, { params }) {
-  const { id } = params; // Obtiene el ID de la URL dinámica
+  // FIX: Await params before destructuring its properties
+  const { id } = await params;
 
   try {
-    // Para eliminar una propiedad que tiene imágenes relacionadas,
-    // necesitamos configurar el `onDelete` en el `schema.prisma`
-    // a `Cascade` para las relaciones, o eliminar las imágenes manualmente primero.
-    // Asumiendo que ya configuraste `onDelete: Cascade` en tu schema.
-
     const deletedProperty = await prisma.property.delete({
       where: { id: id },
     });
 
-    // Devuelve un 204 No Content para indicar que la operación fue exitosa pero no hay contenido que devolver.
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error(`Error deleting property with ID ${id}:`, error);
