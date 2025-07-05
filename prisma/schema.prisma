@@ -82,3 +82,54 @@ model PropertyImage {
   // Foreign key linking this image to a specific Property.
   propertyId String
 }
+
+// Models for authentication
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  hashedPassword String? // Added for CredentialsProvider
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? // Removed @db.Text
+  access_token       String? // Removed @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? // Removed @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_sessionToken_unique_constraint") // Added @map for unique name
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // @@unique([sessionToken]) // This line is redundant if @unique is on the field, but NextAuth's adapter might expect it.
+                           // Let's keep it and add a map to it as well for safety.
+  @@unique([sessionToken], map: "Session_sessionToken_key") // Added map to the block as well
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
