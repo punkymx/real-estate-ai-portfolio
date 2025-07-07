@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { signIn } from 'next-auth/react'; // Import signIn function from NextAuth.js
-import { useRouter } from 'next/navigation'; // For redirection after sign-in
-import Link from 'next/link'; // For navigation
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Ensure Link is imported
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -16,11 +16,10 @@ export default function SignInPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null); // Clear previous errors
+    setError(null);
 
-    // Call NextAuth.js signIn function
     const result = await signIn('credentials', {
-      redirect: false, // Prevent NextAuth.js from redirecting automatically
+      redirect: false,
       email,
       password,
     });
@@ -28,12 +27,9 @@ export default function SignInPage() {
     setIsLoading(false);
 
     if (result?.error) {
-      // If there's an error (e.g., invalid credentials)
       setError(result.error);
     } else if (result?.ok) {
-      // If sign-in is successful
-      // Redirect to a dashboard or the properties page
-      router.push('/properties'); // Or any other protected route
+      router.push('/properties');
     }
   };
 
@@ -92,8 +88,10 @@ export default function SignInPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
-          Don't have an account? {/* For future: <Link href="/auth/signup">Sign Up</Link> */}
-          <span className="text-blue-600"> Contact admin to create one.</span>
+          Don't have an account?{' '}
+          <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500"> {/* <-- NEW LINK HERE */}
+            Sign Up
+          </Link>
         </p>
       </div>
     </div>
