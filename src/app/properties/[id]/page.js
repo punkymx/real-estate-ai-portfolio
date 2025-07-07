@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; // Import useRouter for redirection
+import { useSession } from 'next-auth/react'; // Import useSession for auth check
 
 // Import Swiper React components
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -23,11 +24,15 @@ import { Navigation, Pagination, FreeMode, Thumbs } from 'swiper/modules';
 export default function PropertyDetailPage() {
   const params = useParams();
   const propertyId = params.id;
+  const router = useRouter(); // Initialize useRouter
+  const { data: session, status } = useSession(); // Get session data and loading status
 
   const [property, setProperty] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [thumbsSwiper, setThumbsSwiper] = useState(null); // State for the thumbnail swiper instance
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // State for delete confirmation modal
+  const [isDeleting, setIsDeleting] = useState(false); // State for delete loading
 
   useEffect(() => {
     if (!propertyId) {
@@ -61,11 +66,48 @@ export default function PropertyDetailPage() {
     fetchProperty();
   }, [propertyId]);
 
+  // Handle delete operation
+  const handleDelete = async () => {
+    setShowDeleteConfirm(true); // Show confirmation modal
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    setError(null); // Clear any previous errors
+
+    try {
+      const response = await fetch(`/api/properties/${propertyId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      // If successful (204 No Content), redirect to properties catalog
+      console.log('Property deleted successfully!');
+      router.push('/properties'); // Redirect to the main properties catalog
+    } catch (err) {
+      console.error('Error deleting property:', err);
+      setError(err.message || 'Failed to delete property. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false); // Close confirmation modal
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false); // Close confirmation modal
+  };
+
+
   if (isLoading) {
     return <p className="text-center text-blue-600 p-8 text-lg">Loading property details...</p>;
   }
 
-  if (error) {
+  // Display fetch error if not currently deleting
+  if (error && !isDeleting) {
     return (
       <div className="text-center text-red-600 p-8 text-lg">
         <p>{error}</p>
@@ -174,16 +216,49 @@ export default function PropertyDetailPage() {
         <p className="text-gray-700 leading-relaxed">{property.description}</p>
       </div>
 
-      {/* Placeholder for future actions (Edit/Delete) */}
-      <div className="flex justify-end mt-8">
-        {/* These buttons will be implemented after authentication */}
-        {/* <button className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md mr-2">
-          Edit Property
-        </button>
-        <button className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md">
-          Delete Property
-        </button> */}
-      </div>
+      {/* Action Buttons (Edit/Delete) - Conditionally rendered based on authentication */}
+      {status === 'authenticated' && (
+        <div className="flex justify-end mt-8">
+          <Link href={`/properties/${property.id}/edit`} passHref>
+            <button className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md mr-2 transition-colors duration-200">
+              Edit Property
+            </button>
+          </Link>
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Property'}
+          </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Confirm Deletion</h3>
+            <p className="text-gray-700 mb-6">Are you sure you want to delete this property? This action cannot be undone.</p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
