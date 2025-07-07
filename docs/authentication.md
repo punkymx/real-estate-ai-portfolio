@@ -1,4 +1,5 @@
 Authentication Implementation with NextAuth.js
+
 This section details the setup and integration of user authentication into the Next.js application using NextAuth.js, covering both backend API routes and frontend UI components, including user registration.
 
 1. Objective

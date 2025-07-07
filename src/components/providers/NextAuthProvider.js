@@ -11,3 +11,5 @@ export default function NextAuthProvider({ children }) {
     </SessionProvider>
   );
 }
+// This component wraps your application with the SessionProvider from NextAuth.js
+// It allows you to access the session in any child component using the useSession hook.

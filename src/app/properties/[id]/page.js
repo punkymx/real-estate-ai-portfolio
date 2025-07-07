@@ -133,6 +133,11 @@ export default function PropertyDetailPage() {
   // Ensure 'property.image' is always first if it exists
   const allImages = property.image ? [{ id: 'main', url: property.image }, ...property.images] : property.images;
 
+  // Helper function to check if user has a specific role
+  // This function is crucial for role-based visibility
+  const hasRole = (requiredRole) => {
+    return session?.user?.role === requiredRole;
+  };
 
   return (
     <main className="p-4 max-w-4xl mx-auto bg-white shadow-lg rounded-lg my-8">
@@ -145,32 +150,30 @@ export default function PropertyDetailPage() {
       {allImages && allImages.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-3">Property Photos</h2>
-          {/* Main Swiper (large images) */}
           <Swiper
             spaceBetween={10}
             navigation={true}
             thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
             modules={[FreeMode, Navigation, Thumbs, Pagination]}
             className="mySwiper2 rounded-lg"
-            pagination={{ clickable: true }} // Add pagination dots
-            loop={true} // Enable looping
+            pagination={{ clickable: true }}
+            loop={true}
           >
             {allImages.map((img) => (
-              <SwiperSlide key={img.id || img.url}> {/* Use img.url as fallback key */}
+              <SwiperSlide key={img.id || img.url}>
                 <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden">
                   <Image
                     src={img.url}
                     alt={`Property image for ${property.title}`}
                     layout="fill"
                     objectFit="cover"
-                    priority={img.id === 'main'} // Prioritize main image
+                    priority={img.id === 'main'}
                   />
                 </div>
               </SwiperSlide>
             ))}
           </Swiper>
 
-          {/* Thumbnail Swiper */}
           <Swiper
             onSwiper={setThumbsSwiper}
             spaceBetween={10}
@@ -216,8 +219,8 @@ export default function PropertyDetailPage() {
         <p className="text-gray-700 leading-relaxed">{property.description}</p>
       </div>
 
-      {/* Action Buttons (Edit/Delete) - Conditionally rendered based on authentication */}
-      {status === 'authenticated' && (
+      {/* Action Buttons (Edit/Delete) - Conditionally rendered based on authentication and role */}
+      {status === 'authenticated' && (hasRole('AGENT') || hasRole('ADMIN')) && (
         <div className="flex justify-end mt-8">
           <Link href={`/properties/${property.id}/edit`} passHref>
             <button className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md mr-2 transition-colors duration-200">

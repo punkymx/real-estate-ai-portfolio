@@ -34,6 +34,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      { // Added Cloudinary hostname
+        protocol: 'https',
+        hostname: 'www.google.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   // Other Next.js configurations if you have them...

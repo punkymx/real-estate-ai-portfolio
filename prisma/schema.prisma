@@ -83,6 +83,13 @@ model PropertyImage {
   propertyId String
 }
 
+enum Role {
+  CLIENT    // Can view properties, maybe save favorites (future feature)
+  AGENT     // Can create, edit, delete properties (and view all)
+  ADMIN     // Full control (can manage users, properties, etc.)
+}
+
+
 // Models for authentication
 model User {
   id            String    @id @default(cuid())
@@ -91,6 +98,7 @@ model User {
   emailVerified DateTime?
   hashedPassword String? // Added for CredentialsProvider
   image         String?
+  role          Role      @default(CLIENT) // <-- NEW FIELD: Default role is CLIENT
   accounts      Account[]
   sessions      Session[]
 }
