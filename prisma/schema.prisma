@@ -84,25 +84,27 @@ model PropertyImage {
 }
 
 enum Role {
-  CLIENT    // Can view properties, maybe save favorites (future feature)
-  AGENT     // Can create, edit, delete properties (and view all)
-  ADMIN     // Full control (can manage users, properties, etc.)
+  CLIENT
+  AGENT
+  ADMIN
 }
 
-
-// Models for authentication
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
   emailVerified DateTime?
-  hashedPassword String? // Added for CredentialsProvider
+  hashedPassword String?
   image         String?
-  role          Role      @default(CLIENT) // <-- NEW FIELD: Default role is CLIENT
+  role          Role      @default(CLIENT)
+
+  // NEW FIELDS: Timestamps for creation and update
+  createdAt     DateTime  @default(now()) // Automatically set on creation
+  updatedAt     DateTime  @updatedAt      // Automatically updated on every save
+
   accounts      Account[]
   sessions      Session[]
 }
-
 model Account {
   id                 String  @id @default(cuid())
   userId             String
@@ -140,4 +142,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique // The actual token sent to the user
+  email     String   // The email associated with the token
+  expires   DateTime // When the token expires
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email]) // Index for faster lookups by email
 }

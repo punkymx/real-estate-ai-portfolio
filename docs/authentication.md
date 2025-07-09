@@ -1,13 +1,14 @@
 Authentication Implementation with NextAuth.js
-
-This section details the setup and integration of user authentication into the Next.js application using NextAuth.js, covering both backend API routes and frontend UI components, including user registration.
+This section details the configuration and integration of user authentication into the Next.js application using NextAuth.js, covering both backend API routes and frontend UI components, including user registration and role-based authorization.
 
 1. Objective
 Implement a robust authentication system to secure API routes and control user access.
 
 Provide user-friendly sign-in and sign-up interfaces.
 
-Display user session status in the application's header.
+Display user session status and role in the application's header.
+
+Implement role-based authorization to restrict access to sensitive functionalities.
 
 2. Key Technologies & Techniques
 NextAuth.js: The primary authentication library for Next.js applications.
@@ -18,9 +19,9 @@ bcryptjs: Used for securely hashing and comparing user passwords during sign-in 
 
 Prisma ORM: Database toolkit for defining User, Account, Session, and VerificationToken models.
 
-Next.js App Router API Routes: Special dynamic routes (/api/auth/[...nextauth]/route.js) to handle authentication flows and custom routes (/api/register/route.js) for user registration.
+Next.js App Router API Routes: Special dynamic routes (/api/auth/[...nextauth]/route.js) to handle authentication flows and custom routes (/api/register/route.js, /api/admin/users/route.js, /api/admin/users/[id]/route.js) for user registration and admin management.
 
-Next.js Client Components: ('use client') for interactive UI elements (SignInPage, SignUpPage, Header, EditPropertyPage, PropertyDetailPage).
+Next.js Client Components: ('use client') for interactive UI elements (SignInPage, SignUpPage, Header, EditPropertyPage, PropertyDetailPage, AdminUsersPage).
 
 React Context: Used internally by SessionProvider to manage and provide session data across the React component tree.
 
@@ -41,7 +42,7 @@ Includes error logging within the authorize callback for debugging purposes.
 
 session: { strategy: "jwt" }: Configures NextAuth.js to use JSON Web Tokens (JWTs) for session management, which is stateless and scalable.
 
-callbacks: { jwt, session }: Customizes the JWT and session objects to include the user's id from the database, making it accessible in the frontend.
+callbacks: { jwt, session }: Customizes the JWT and session objects to include the user's id and role from the database, making them accessible in the frontend.
 
 pages: { signIn: "/auth/signin" }: Specifies a custom sign-in page, allowing for tailored UI.
 
@@ -62,7 +63,7 @@ Performs basic validation to ensure all required fields are present.
 
 Checks if a user with the provided email already exists to prevent duplicates.
 
-Hashes the password using bcrypt.hash() before storing it in the database for security.
+Hashes the password using bcrypt.hash() before storing it for security.
 
 Creates a new User record in the database using Prisma.
 
@@ -70,25 +71,65 @@ Returns the new user's id, name, and email upon successful creation (excluding t
 
 Includes error handling for validation failures and unique constraint violations (e.g., duplicate email).
 
-5. Database Schema Update (prisma/schema.prisma)
-To support NextAuth.js's database adapter and custom user registration, the following models were added/updated in schema.prisma:
+5. Backend Setup: API Routes for User Management (src/app/api/admin/users/route.js and src/app/api/admin/users/[id]/route.js)
+These API routes allow administrators to list, update, and delete users.
 
-User: Stores user information (email, name, hashed password).
+Route for Listing Users: src/app/api/admin/users/route.js
 
-Account: Links users to external authentication providers (even for credentials, it manages provider details).
+GET handler:
+
+Requires the user to be authenticated and have the ADMIN role.
+
+Returns a list of all users (excluding hashed passwords).
+
+Includes createdAt and updatedAt for sorting and display.
+
+Route for Managing Users by ID: src/app/api/admin/users/[id]/route.js
+
+PUT handler:
+
+Requires the user to be authenticated and have the ADMIN role.
+
+Updates the role of a specific user.
+
+Implements crucial protection: An ADMIN cannot change their own role to a non-ADMIN role.
+
+DELETE handler:
+
+Requires the user to be authenticated and have the ADMIN role.
+
+Deletes a specific user from the database.
+
+Implements crucial protection: An ADMIN cannot delete their own account.
+
+6. Database Schema Update (prisma/schema.prisma)
+To support NextAuth.js's database adapter, user roles, and timestamps, the following models were added/updated in schema.prisma:
+
+User: Stores user information (email, name, hashed password, role, timestamps).
+
+An enum Role (CLIENT, AGENT, ADMIN) and a role field with @default(CLIENT) were added.
+
+createdAt (@default(now())) and updatedAt (@updatedAt) fields were added for automatic creation and last update timestamp tracking.
+
+Account: Links users to external authentication providers.
 
 Session: Stores active user sessions.
 
-VerificationToken: Used for email-based authentication flows (e.g., passwordless sign-in), though not actively used in the current CredentialsProvider setup.
+VerificationToken: Used for email-based authentication flows.
 
-Migration: After updating the schema, npx prisma migrate dev --name add_auth_models was executed to apply these changes to the database.
+Migration: After updating the schema, npx prisma migrate dev --name <migration_name> was executed to apply these changes to the database. In case of issues with existing data, a complete reset of the development database was performed.
 
-SQLite Specific Adjustments: Removed @db.Text annotations for String? fields in the Account model, as SQLite handles large text fields differently. Also, added @map to Session.sessionToken to ensure unique constraint names compatible with SQLite.
-
-6. Environment Variable (.env.local)
+7. Environment Variable (.env.local)
 NEXTAUTH_SECRET: A long, random string is required for signing JWTs. This variable must be set in .env.local and kept secret.
 
-7. Frontend Setup
+8. Image Optimization Configuration (next.config.mjs)
+To allow the next/image component to load images from external domains, these domains must be explicitly configured.
+
+images.remotePatterns: Used to list allowed hostnames from which images can be loaded. This is vital for Next.js image security and optimization.
+
+Backend Validation: Additional validation was implemented in the property API routes (/api/properties and /api/properties/[id]) to verify image URLs before they are saved to the database. This prevents server errors caused by invalid or unpermitted image URLs and provides user feedback.
+
+9. Frontend Setup
 a. Session Provider Wrapper (src/components/providers/NextAuthProvider.js)
 To resolve the React Context is unavailable in Server Components error when using SessionProvider in layout.js, a dedicated client component wrapper was created.
 
@@ -97,14 +138,14 @@ Path: src/components/providers/NextAuthProvider.js
 Purpose: This 'use client' component simply wraps the SessionProvider from next-auth/react, making the session context available to its children without forcing layout.js to be a client component.
 
 b. Root Layout Integration (src/app/layout.js)
-The application's root layout was updated to include the NextAuthProvider wrapper.
+The application's root layout was updated to include the NextAuthProvider wrapper and the Header component.
 
 Path: src/app/layout.js
 
-Integration: The NextAuthProvider component is imported and used to wrap the {children} prop, ensuring all pages within the application have access to the authentication session. Existing font configurations (Geist, Geist_Mono) were preserved.
+Integration: The NextAuthProvider component is imported and used to wrap the {children} prop, ensuring all pages within the application have access to the authentication session. The Header is placed before {children} to be visible on all pages.
 
 c. Custom Sign-in Page (src/app/auth/signin/page.js)
-A custom sign-in page was created to provide a dedicated UI for user authentication.
+A custom sign-in page was created to provide a dedicated UI.
 
 Path: src/app/auth/signin/page.js
 
@@ -116,7 +157,7 @@ Utilizes signIn function from next-auth/react with the 'credentials' provider.
 
 Handles successful sign-in by redirecting to /properties using useRouter.
 
-Displays error messages (CredentialsSignin) for invalid login attempts.
+Displays error messages for invalid login attempts.
 
 Includes a "Sign Up" link to navigate to the user registration page.
 
@@ -138,7 +179,7 @@ Provides user feedback (loading, success, error messages).
 Upon successful registration, redirects the user to the sign-in page.
 
 e. Application Header (src/components/Header.js)
-A new header component was created to display the user's authentication status and provide navigation.
+A new header component to display the user's authentication status and provide navigation.
 
 Path: src/components/Header.js
 
@@ -146,46 +187,84 @@ Functionality:
 
 Uses useSession() from next-auth/react to access the current session data and status.
 
-Conditionally renders UI elements based on authentication status:
+Conditionally renders UI elements based on authentication status and user role:
 
 "Loading..." during session check.
 
-"Welcome, [User Name/Email]!" and a "Sign Out" button if authenticated.
+"Welcome, [User Name/Email] ([Role])!" and a "Sign Out" button if authenticated.
 
 A "Sign In" button if unauthenticated.
 
-The "Create Property" link (/properties/create) is now only visible when the user is authenticated.
+The "Create Property" link (/properties/create) is only visible when the user is authenticated and has the AGENT or ADMIN role.
+
+The "Admin Panel" link (/admin/users) is only visible for ADMIN users.
 
 The "Sign Out" button calls signOut() to end the user's session and redirect them to the home page.
 
-8. API Route Protection (Backend)
-Implemented server-side authentication checks to restrict access to sensitive API operations.
+f. Role-Protected Property Pages (src/app/properties/create/page.js, src/app/properties/[id]/edit/page.js, src/app/properties/[id]/page.js)
+These frontend pages implement role verification to control visibility and access.
 
-src/app/api/properties/route.js (for POST):
+src/app/properties/create/page.js and src/app/properties/[id]/edit/page.js:
 
-Uses getServerSession(authOptions) to verify if a user is authenticated before allowing a POST request to create a new property.
+Use useSession() to verify the user's role.
 
-Returns a 401 Unauthorized response if no active session is found.
+If the user is neither AGENT nor ADMIN, they are redirected to the sign-in page or shown a "You do not have permission..." message.
 
-src/app/api/properties/[id]/route.js (for PUT and DELETE):
+src/app/properties/[id]/page.js (Property Details):
 
-Similarly, uses getServerSession(authOptions) to protect PUT (update) and DELETE operations for specific properties.
+Uses useSession() to verify the user's role.
 
-Returns a 401 Unauthorized response if the user is not logged in.
+"Edit Property" and "Delete Property" buttons are only displayed if the user is AGENT or ADMIN.
 
-9. Testing and Verification
-Database User: Initially, a test user was manually created in Prisma Studio (npx prisma studio) with a securely hashed password (bcrypt.hashSync).
+g. User Management Page (src/app/admin/users/page.js)
+A new client-side page for administrators to manage other users.
 
-User Registration Flow: Tested by navigating to /auth/signup, filling the form, and verifying successful account creation and redirection.
+Path: src/app/admin/users/page.js
 
-Login Flow: Tested by navigating to /auth/signin, entering valid credentials (including newly registered users), and verifying redirection to /properties with the updated header showing user information.
+Functionality:
 
-Logout Flow: Tested by clicking the "Sign Out" button and verifying redirection to the home page and the header reverting to the "Sign In" state.
+Uses useSession() to ensure only ADMIN users can access the page.
 
-Frontend Route Protection: Verified that accessing protected frontend routes (e.g., /properties/create, /properties/[id]/edit) without authentication redirects to the sign-in page.
+Displays a table of all registered users, including their name, email, role, creation date, and last update date.
 
-Backend API Protection: Verified that attempting POST, PUT, or DELETE requests to /api/properties or /api/properties/[id] (e.g., via Postman) without a valid session results in a 401 Unauthorized response.
+Includes "Edit Role" and "Delete" buttons for each user.
 
-Property Edit Flow: Tested by navigating to a property detail page, clicking "Edit Property", modifying details, and verifying the update.
+Implements confirmation modals for deletion and an edit modal for changing a user's role.
 
-Property Delete Flow: Tested by navigating to a property detail page, clicking "Delete Property", confirming deletion, and verifying the property's removal from the catalog.
+Frontend Protection: The "Delete" button is disabled for the administrator's own account.
+
+10. Testing and Verification
+Clean Database: A complete reset of the development database was performed to ensure a consistent schema with createdAt and updatedAt fields in the User model.
+
+User Registration Flow: Tested the registration of new users and the assignment of the default CLIENT role.
+
+Admin Role Assignment: Verified the ability to manually assign the ADMIN role to a user via Prisma Studio.
+
+Sign-in and Sign-out Flow: Tested signing in and out with different roles.
+
+Frontend Route Protection by Role: Verified that access to pages like /properties/create, /properties/[id]/edit, and /admin/users is restricted based on the user's role.
+
+UI Visibility by Role: Confirmed that links and buttons (e.g., "Create Property", "Admin Panel", "Edit/Delete Property") are correctly shown or hidden based on the user's role.
+
+Backend API Protection by Role: Verified that POST, PUT, DELETE requests to properties and PUT, DELETE requests to users (in the admin panel) are rejected with a 403 Forbidden if the user does not have the appropriate role.
+
+Self-Demotion/Deletion Protection: Tested that an ADMIN user cannot change their own role to a lower one or delete their own account.
+
+11. Production Considerations: Emergency "Super Admin" Mechanism
+It is crucial to have an administration access recovery mechanism that does not depend on the application's web interface. This is vital for scenarios where:
+
+The sole ADMIN user forgets their password and there is no "forgot password" flow implemented.
+
+The administration interface becomes corrupted due to a code or data error.
+
+You need to create a new initial ADMIN user without going through the public registration flow.
+
+Recommendation: For production, a command-line interface (CLI) script should be implemented to run directly on the server. This script would use Prisma Client to interact directly with the database and allow an authorized user (with server access) to perform critical operations such as:
+
+Creating a new user with any role (including ADMIN).
+
+Changing the role of any existing user.
+
+Resetting any user's password.
+
+This script acts as an emergency "master key," providing an additional layer of robustness and resilience for user management in a production environment.
