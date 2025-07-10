@@ -13,10 +13,11 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-md p-4 flex justify-between items-center">
+    // Added 'sticky top-0 z-50' classes to make the header static
+    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-50">
       {/* Logo/Brand Name */}
       <Link href="/" className="text-2xl font-bold text-gray-800 hover:text-blue-600 transition-colors duration-200">
-        Real Estate App
+        Real Estate App Demo
       </Link>
 
       {/* Navigation Links */}
@@ -29,7 +30,7 @@ export default function Header() {
             Create Property
           </Link>
         )}
-        {/* NEW: Admin Panel Link, visible only for ADMIN */}
+        {/* Admin Panel Link, visible only for ADMIN */}
         {status === 'authenticated' && hasRole('ADMIN') && (
           <Link href="/admin/users" className="text-gray-600 hover:text-blue-600 transition-colors duration-200">
             Admin Panel
@@ -60,7 +61,3 @@ export default function Header() {
     </header>
   );
 }
-// This component serves as the header for the application, providing navigation links and user authentication status.
-// It includes links to the home page, properties, create property (for agents/admins), 
-// and an admin panel (for admins only). The header also displays the user's name, role, and a sign-out button if authenticated.
-// The design is responsive and uses Tailwind CSS for styling.  
