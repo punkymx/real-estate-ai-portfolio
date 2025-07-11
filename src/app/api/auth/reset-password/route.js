@@ -5,6 +5,32 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Function to validate password complexity (Backend version)
+const validatePassword = (pwd) => {
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(pwd);
+  const hasLowerCase = /[a-z]/.test(pwd);
+  const hasNumber = /[0-9]/.test(pwd);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pwd);
+
+  if (pwd.length < minLength) {
+    return `Password must be at least ${minLength} characters long.`;
+  }
+  if (!hasUpperCase) {
+    return 'Password must contain at least one uppercase letter.';
+  }
+  if (!hasLowerCase) {
+    return 'Password must contain at least one lowercase letter.';
+  }
+  if (!hasNumber) {
+    return 'Password must contain at least one number.';
+  }
+  if (!hasSpecialChar) {
+    return 'Password must contain at least one special character.';
+  }
+  return null; // Password is valid
+};
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -13,6 +39,13 @@ export async function POST(request) {
     if (!token || !password) {
       return NextResponse.json({ message: 'Token and new password are required.' }, { status: 400 });
     }
+
+    // --- NEW: Backend Password Complexity Validation ---
+    const passwordValidationError = validatePassword(password);
+    if (passwordValidationError) {
+      return NextResponse.json({ message: passwordValidationError }, { status: 400 });
+    }
+    // --- END NEW ---
 
     // Buscar el token en la base de datos
     const resetTokenRecord = await prisma.passwordResetToken.findUnique({

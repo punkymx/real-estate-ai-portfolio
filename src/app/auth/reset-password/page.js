@@ -16,6 +16,32 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState(''); // For success messages
   const [error, setError] = useState(null); // For error messages
 
+  // Function to validate password complexity
+  const validatePassword = (pwd) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(pwd);
+    const hasLowerCase = /[a-z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pwd);
+
+    if (pwd.length < minLength) {
+      return `Password must be at least ${minLength} characters long.`;
+    }
+    if (!hasUpperCase) {
+      return 'Password must contain at least one uppercase letter.';
+    }
+    if (!hasLowerCase) {
+      return 'Password must contain at least one lowercase letter.';
+    }
+    if (!hasNumber) {
+      return 'Password must contain at least one number.';
+    }
+    if (!hasSpecialChar) {
+      return 'Password must contain at least one special character.';
+    }
+    return null; // Password is valid
+  };
+
   // Effect to handle initial token check and potential redirection if no token is present
   useEffect(() => {
     // If no token is present in the URL on initial load, set an error
@@ -43,8 +69,9 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 6) { // Basic password length validation
-      setError('Password must be at least 6 characters long.');
+    const passwordValidationError = validatePassword(password);
+    if (passwordValidationError) {
+      setError(passwordValidationError);
       setIsLoading(false);
       return;
     }
@@ -139,6 +166,9 @@ export default function ResetPasswordPage() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Enter your new password"
             />
+            {password && validatePassword(password) && (
+              <p className="mt-2 text-sm text-red-600">{validatePassword(password)}</p>
+            )}
           </div>
 
           <div>
@@ -153,6 +183,9 @@ export default function ResetPasswordPage() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Confirm your new password"
             />
+            {password && confirmPassword && password !== confirmPassword && (
+              <p className="mt-2 text-sm text-red-600">Passwords do not match.</p>
+            )}
           </div>
 
           <div>

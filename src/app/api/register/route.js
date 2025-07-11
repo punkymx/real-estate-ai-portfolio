@@ -5,6 +5,32 @@ import bcrypt from 'bcryptjs'; // Import bcryptjs for password hashing
 
 const prisma = new PrismaClient();
 
+// Function to validate password complexity (Backend version)
+const validatePassword = (pwd) => {
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(pwd);
+  const hasLowerCase = /[a-z]/.test(pwd);
+  const hasNumber = /[0-9]/.test(pwd);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pwd);
+
+  if (pwd.length < minLength) {
+    return `Password must be at least ${minLength} characters long.`;
+  }
+  if (!hasUpperCase) {
+    return 'Password must contain at least one uppercase letter.';
+  }
+  if (!hasLowerCase) {
+    return 'Password must contain at least one lowercase letter.';
+  }
+  if (!hasNumber) {
+    return 'Password must contain at least one number.';
+  }
+  if (!hasSpecialChar) {
+    return 'Password must contain at least one special character.';
+  }
+  return null; // Password is valid
+};
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -14,6 +40,13 @@ export async function POST(request) {
     if (!name || !email || !password) {
       return NextResponse.json({ message: 'Name, email, and password are required.' }, { status: 400 });
     }
+
+    // --- NEW: Backend Password Complexity Validation ---
+    const passwordValidationError = validatePassword(password);
+    if (passwordValidationError) {
+      return NextResponse.json({ message: passwordValidationError }, { status: 400 });
+    }
+    // --- END NEW ---
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -38,7 +71,6 @@ export async function POST(request) {
         id: true,
         name: true,
         email: true,
-        // Removed 'createdAt: true' as it's not in your Prisma User model
       },
     });
 

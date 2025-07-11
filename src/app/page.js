@@ -24,7 +24,7 @@ export default function Home() {
               Find Your Ideal Space, Invest with Confidence
             </h1>
             <p className="text-lg md:text-xl max-w-2xl drop-shadow-md">
-              Explore houses, apartments, land, and vacation rentals, and more.
+              Explore houses, apartments, land, vacation rentals, and more.
             </p>
           </div>
         </div>
