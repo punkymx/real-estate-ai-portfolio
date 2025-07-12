@@ -1,9 +1,9 @@
 // src/app/api/auth/[...nextauth]/route.js
-import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import NextAuth from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -11,74 +11,79 @@ export const authOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "jsmith@example.com" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials, req) {
-        try {
-          if (!credentials?.email || !credentials?.password) {
-            console.log("Authorize: Missing email or password credentials.");
-            return null;
-          }
-
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
-          });
-
-          if (!user || !user.hashedPassword) {
-            console.log(`Authorize: User not found or no hashed password for email: ${credentials.email}`);
-            return null;
-          }
-
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.hashedPassword);
-
-          if (isPasswordValid) {
-            console.log(`Authorize: User ${user.email} signed in successfully.`);
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role, // <-- Ensure user.role is included here from Prisma
-            };
-          } else {
-            console.log(`Authorize: Invalid password for user: ${credentials.email}`);
-            return null;
-          }
-        } catch (error) {
-          console.error("Authorize Callback Error:", error);
-          return null;
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Please enter an email and password.');
         }
-      }
-    })
+
+        // 1. Find the user by email
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) {
+          // Do not reveal if user exists or not for security reasons
+          throw new Error('Invalid credentials.');
+        }
+
+        // 2. Compare the provided password with the hashed password in the database
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.hashedPassword
+        );
+
+        if (!isPasswordValid) {
+          throw new Error('Invalid credentials.');
+        }
+
+        // --- NEW: Check if email is verified ---
+        if (!user.emailVerified) {
+          console.log(`[AUTH] Login attempt by unverified user: ${user.email}`);
+          // Throw a specific error that the frontend can catch
+          throw new Error('Please verify your email address to log in.');
+        }
+        // --- END NEW ---
+
+        // If email is verified and password is valid, return the user object
+        // The user object will be available in the session and JWT
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role, // Make sure the role is included
+          emailVerified: user.emailVerified, // Include emailVerified status
+        };
+      },
+    }),
   ],
   session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    strategy: 'jwt',
   },
   callbacks: {
     async jwt({ token, user }) {
-      // The `user` object is only available the first time `jwt` is called
-      // (i.e., after a successful sign-in).
       if (user) {
         token.id = user.id;
-        token.role = user.role; // <-- CRITICAL: Add role from the user object to the JWT token
+        token.role = user.role;
+        token.emailVerified = user.emailVerified; // Add emailVerified to JWT
       }
       return token;
     },
     async session({ session, token }) {
-      // The `session` object is the one available in `useSession` or `getSession`
-      // Add user ID and role from token to the session
       if (token) {
         session.user.id = token.id;
-        session.user.role = token.role; // <-- CRITICAL: Add role from the token to the session object
+        session.user.role = token.role;
+        session.user.emailVerified = token.emailVerified; // Add emailVerified to session
       }
       return session;
-    }
+    },
   },
   pages: {
-    signIn: "/auth/signin",
+    signIn: '/auth/signin', // Custom sign-in page
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
