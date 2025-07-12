@@ -23,72 +23,51 @@ datasource db {
 
 // Model for the 'Property' table.
 model Property {
-  // Primary key for the property.
-  // @id: Marks it as the primary key.
-  // @default(uuid()): Automatically generates a UUID for new records.
-  id              String    @id @default(uuid())
-  // Title or name of the property (e.g., "Spacious House in Chuburná").
-  title           String
-  // Price of the property. Using Float to allow for decimal values.
-  price           Float
-  // Location or address of the property.
-  location        String
-  // URL to the main image of the property.
-  image           String
-  // Type of property (e.g., "Casa", "Apartamento", "Terreno").
-  type            String
-  // Number of bedrooms.
-  bedrooms        Int
-  // Number of bathrooms.
-  bathrooms       Int
-  // Operation type: "Venta" (Sale) or "Renta" (Rent).
-  operation       String
-  // Detailed description of the property. Optional field, can be null.
-  description     String?
-  // Relation to the PropertyImage model.
-  // 'PropertyImage[]' indicates that one property can have many images.
-  // This defines a one-to-many relationship.
-  images          PropertyImage[]
-  // Deposit amount for rental properties. Optional field.
-  deposit         Float?
-  // Construction area of the property (e.g., "200 m²"). Optional.
-  constructionArea String?
-  // Land area of the property (e.g., "300 m²"). Optional.
-  landArea        String?
-  // Indicates if the property is furnished (true/false). Optional.
-  furnished       Boolean?
-  // Timestamp for when the record was created.
-  // @default(now()): Automatically sets the current timestamp on creation.
-  createdAt       DateTime  @default(now())
-  // Timestamp for when the record was last updated.
-  // @updatedAt: Automatically updates the timestamp on every record modification.
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  title            String
+  price            Float
+  location         String
+  image            String    // Main image URL (matches frontend field name 'image')
+  type             String
+  bedrooms         Int?      // Optional as per frontend (sends empty string if not filled)
+  bathrooms        Int?      // Optional as per frontend (sends empty string if not filled)
+  operation        String
+  description      String    // Required as per frontend
+  furnished        Boolean   @default(false) // Required with default as per frontend
+  constructionArea String?   // Optional as per frontend
+  landArea         String?   // Optional as per frontend
+  images           PropertyImage[] // Relation to gallery images (PropertyImage model)
+
+  // --- CRÍTICO: Relación con el usuario propietario ---
+  ownerId          String // Clave foránea al usuario que posee esta propiedad
+  owner            User      @relation(fields: [ownerId], references: [id])
+  // --- FIN CRÍTICO ---
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("properties") // Asegura que el nombre de la tabla en la DB sea 'properties'
 }
 
 // Model for the 'PropertyImage' table.
-// This table stores the URLs for the gallery images of each property.
 model PropertyImage {
-  // Primary key for the image record.
-  id        String @id @default(uuid())
-  // URL of the image.
-  url       String
-  // Relation back to the Property model.
-  // 'property': Defines the inverse relationship (an image belongs to one property).
-  // @relation(...): Sets up the foreign key relationship.
-  // fields: [propertyId] -> The foreign key column in this table.
-  // references: [id] -> The primary key in the related Property table.
-  // onDelete: Cascade -> If a Property is deleted, its associated images are also deleted.
-  property  Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  // Foreign key linking this image to a specific Property.
+  id         String @id @default(uuid())
+  url        String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   propertyId String
+
+  @@map("property_images") // Asegura el nombre de la tabla
 }
 
+// Asegúrate de que tu enum Role también esté definido así:
 enum Role {
   CLIENT
   AGENT
   ADMIN
 }
 
+
+// Model for the 'User' table.
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -98,12 +77,12 @@ model User {
   image         String?
   role          Role      @default(CLIENT)
 
-  // NEW FIELDS: Timestamps for creation and update
-  createdAt     DateTime  @default(now()) // Automatically set on creation
-  updatedAt     DateTime  @updatedAt      // Automatically updated on every save
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]
+  properties    Property[] // --- CRÍTICO: Relación inversa a Property model (propiedades creadas por este usuario) ---
 }
 model Account {
   id                 String  @id @default(cuid())

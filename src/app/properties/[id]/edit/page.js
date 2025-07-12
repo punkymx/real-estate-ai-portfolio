@@ -4,19 +4,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react'; // To check authentication status
+import { useSession } from 'next-auth/react';
 
 export default function EditPropertyPage() {
   const params = useParams();
   const propertyId = params.id;
   const router = useRouter();
-  const { data: session, status } = useSession(); // Get session to check auth
+  const { data: session, status } = useSession();
 
   const [formData, setFormData] = useState({
     title: '',
     price: '',
     location: '',
-    image: '', // Main image URL
+    image: '', // Main image URL (matches frontend field name)
     type: 'Casa',
     bedrooms: '',
     bathrooms: '',
@@ -33,17 +33,19 @@ export default function EditPropertyPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Redirect if not authenticated (or handle permissions)
+  // Redirect if not authenticated or not authorized role
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin'); // Redirect to sign-in page if not logged in
+    if (status === 'loading') return; // Do nothing while session is loading
+
+    // Check if user is authenticated AND has the required role (AGENT or ADMIN)
+    if (!session || (session.user?.role !== 'AGENT' && session.user?.role !== 'ADMIN')) {
+      router.push('/auth/signin'); // Redirect to sign-in if not authorized
     }
-  }, [status, router]);
+  }, [session, status, router]);
 
   // Fetch existing property data when component mounts or ID changes
   useEffect(() => {
     if (!propertyId || status === 'loading' || status === 'unauthenticated') {
-      // Don't fetch if no ID, or if auth status is still loading/unauthenticated
       return;
     }
 
@@ -51,7 +53,8 @@ export default function EditPropertyPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/properties/${propertyId}`);
+        // Fetch property from the API
+        const response = await fetch(`/api/properties/${propertyId}`); // Assuming you have a dynamic route for single property fetch
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('Property not found');
@@ -65,7 +68,7 @@ export default function EditPropertyPage() {
           title: data.title || '',
           price: data.price || '',
           location: data.location || '',
-          image: data.image || '',
+          image: data.image || '', // Use 'image' from API
           type: data.type || 'Casa',
           bedrooms: data.bedrooms || '',
           bathrooms: data.bathrooms || '',
@@ -85,8 +88,11 @@ export default function EditPropertyPage() {
       }
     };
 
-    fetchProperty();
-  }, [propertyId, status]); // Re-run if propertyId or auth status changes
+    // Only fetch if session is authenticated and user has proper role
+    if (session && (session.user?.role === 'AGENT' || session.user?.role === 'ADMIN')) {
+      fetchProperty();
+    }
+  }, [propertyId, session, status]); // Add session and status to dependencies
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -134,11 +140,11 @@ export default function EditPropertyPage() {
         price: formData.price ? parseFloat(formData.price) : null,
         bedrooms: formData.bedrooms ? parseInt(formData.bedrooms, 10) : null,
         bathrooms: formData.bathrooms ? parseInt(formData.bathrooms, 10) : null,
-        images: imagesToSend,
+        images: imagesToSend, // Send gallery images
       };
 
-      const response = await fetch(`/api/properties/${propertyId}`, {
-        method: 'PUT', // This is the key difference: PUT request
+      const response = await fetch(`/api/properties?id=${propertyId}`, { // Use query param for ID
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -154,7 +160,7 @@ export default function EditPropertyPage() {
       console.log('Property updated successfully!');
 
       setTimeout(() => {
-        router.push(`/properties/${propertyId}`); // Redirect back to the detail page
+        router.push(`/properties/${propertyId}`); // Redirect to detail page
       }, 2000);
 
     } catch (err) {
@@ -165,14 +171,15 @@ export default function EditPropertyPage() {
     }
   };
 
+  // Show loading or unauthorized message while session is being checked or not authorized
   if (status === 'loading' || isLoading) {
     return <p className="text-center text-blue-600 p-8 text-lg">Loading property for editing...</p>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!session || (session.user?.role !== 'AGENT' && session.user?.role !== 'ADMIN')) {
     return (
       <div className="text-center text-red-600 p-8 text-lg">
-        <p>You must be logged in to edit properties.</p>
+        <p>You do not have permission to edit properties.</p>
         <Link href="/auth/signin" className="text-blue-500 hover:underline mt-4 inline-block">
           Go to Sign In
         </Link>
@@ -180,7 +187,7 @@ export default function EditPropertyPage() {
     );
   }
 
-  if (error && !isLoading && !isSubmitting) { // Display fetch error if not loading/submitting
+  if (error && !isLoading && !isSubmitting) {
     return (
       <div className="text-center text-red-600 p-8 text-lg">
         <p>{error}</p>
@@ -392,21 +399,19 @@ export default function EditPropertyPage() {
         </div>
 
         {/* Submission Feedback */}
-        {isSubmitting && <p className="text-blue-600">Updating property...</p>}
+        {isLoading && <p className="text-blue-600">Creating property...</p>}
         {error && <p className="text-red-600">Error: {error}</p>}
-        {success && <p className="text-green-600">Property updated successfully!</p>}
+        {success && <p className="text-green-600">Property created successfully!</p>}
 
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || isLoading}
+          disabled={isLoading}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Updating...' : 'Update Property'}
+          {isLoading ? 'Creating...' : 'Create Property'}
         </button>
       </form>
     </main>
   );
 }
-// This code is a complete React component for editing a property in a Next.js application.
-// It includes form handling, fetching existing property data, and submitting updates.
