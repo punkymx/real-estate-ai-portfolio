@@ -26,7 +26,7 @@ function isValidImageUrl(url) {
   }
 }
 
-// Handler for GET requests to /api/properties (Fetch all properties)
+// Handler for GET requests to /api/properties (Fetch all properties with filters)
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -35,6 +35,8 @@ export async function GET(request) {
     const propertyType = searchParams.get('propertyType');
     const bedrooms = searchParams.get('bedrooms');
     const bathrooms = searchParams.get('bathrooms');
+    const operation = searchParams.get('operation'); // NEW: Operation filter
+    const furnished = searchParams.get('furnished'); // NEW: Furnished filter
 
     const whereClause = {};
 
@@ -45,7 +47,6 @@ export async function GET(request) {
       whereClause.price = { ...whereClause.price, lte: parseFloat(maxPrice) };
     }
     if (propertyType && propertyType !== 'all') {
-      // Use propertyType directly as sent by frontend (e.g., "Casa")
       whereClause.type = propertyType;
     }
     if (bedrooms) {
@@ -53,6 +54,12 @@ export async function GET(request) {
     }
     if (bathrooms) {
       whereClause.bathrooms = { gte: parseInt(bathrooms, 10) };
+    }
+    if (operation && operation !== 'all') { // NEW: Add operation to where clause
+      whereClause.operation = operation;
+    }
+    if (furnished !== null && furnished !== '') { // NEW: Add furnished to where clause
+      whereClause.furnished = furnished === 'true'; // Convert string 'true'/'false' to boolean
     }
 
     const properties = await prisma.property.findMany({
@@ -77,7 +84,7 @@ export async function POST(request) {
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user?.role !== 'AGENT' && session.user?.role !== 'ADMIN')) {
-    return NextResponse.json({ message: 'Unauthorized: You do not have permission to create a property.' }, { status: 403 });
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -165,7 +172,7 @@ export async function PUT(request) {
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user?.role !== 'AGENT' && session.user?.role !== 'ADMIN')) {
-    return NextResponse.json({ message: 'Unauthorized: You do not have permission to update a property.' }, { status: 403 });
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -259,11 +266,11 @@ export async function PUT(request) {
 }
 
 // Handler for DELETE requests to /api/properties (Delete a property)
-export async function DELETE(request) {
+export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user?.role !== 'AGENT' && session.user?.role !== 'ADMIN')) {
-    return NextResponse.json({ message: 'Unauthorized: You do not have permission to delete a property.' }, { status: 403 });
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
   try {
